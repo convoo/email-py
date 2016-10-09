@@ -37,6 +37,7 @@ datashape==0.5.2
 decorator==4.0.10
 dill==0.2.5
 docutils==0.12
+dotenv==0.0.5
 dynd==0.7.3.dev1
 enum34==1.1.6
 et-xmlfile==1.0.1
@@ -115,6 +116,7 @@ pyOpenSSL==16.0.0
 pyparsing==2.1.4
 pytest==2.9.2
 python-dateutil==2.5.3
+python-http-client==2.2.1
 pytz==2016.4
 PyYAML==3.11
 pyzmq==15.2.0
@@ -127,6 +129,7 @@ ruamel-yaml===-VERSION
 scikit-image==0.12.3
 scikit-learn==0.17.1
 scipy==0.17.1
+sendgrid==3.4.0
 simplegeneric==0.8.1
 singledispatch==3.4.0.3
 six==1.10.0
