@@ -9,6 +9,7 @@ import time, logging, configparser
 import pyrebase
 import sendgrid
 from flask import Flask, jsonify, render_template
+from utils import test
 from sendgrid.helpers.mail import *
 
 # environment variables 
@@ -33,6 +34,7 @@ def stream_handler(post):
     if post["data"]:    
         dataSize = (len(post["data"]))
         if dataSize == 6: # this number represents the number of keys in the json its nasty but it works
+        # if the queue stops for any reason and emails back up we still need to go through the ones we havent sent
             prepareEmail(post["path"], post["data"])
         else:
             for i in post["data"]:
@@ -66,7 +68,7 @@ def sendEmail(fromEmail, subject, toEmail, contentType, mailContent):
 
 # place an email in the queue for testng 
 @app.route('/test')
-def hello(): 
+def test(): 
     db.child("email/queue").push({"fromEmail":"teamconvoo@gmail.com","subject":"You are officially on the Beta List!", "toEmail":"email.will.in.china@gmail.com", "contentType":"text/plain", "mailContent":"Woohoo!", "time": int(time.time())})
     return jsonify({'message': "We sent a test email!"})
 
