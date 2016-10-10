@@ -5,10 +5,10 @@
 # using Pyrebase - https://github.com/thisbejim/Pyrebase
 
 # [START app]
-import time, logging, configparser 
+import time, logging, configparser
 import pyrebase
 import sendgrid
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request, redirect, url_for
 from utils import test
 from sendgrid.helpers.mail import *
 
@@ -80,8 +80,16 @@ def index():
 def register():
     return render_template('register.html')
 
-@app.route('/pay')
+@app.route('/pay', methods = ['GET', 'POST'])
 def pay():
+    if request.method == 'POST':
+        url = request.form['url']
+        username = request.form['username']
+        password = request.form['password']
+        apiKey = request.form['apiKey']
+        adminUsername = request.form['adminUsername']
+        adminPassword = request.form['adminPassword']
+        return redirect(url_for('pay'))
     return render_template('pay.html')
 
 @app.route('/contact')
