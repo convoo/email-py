@@ -18,14 +18,14 @@ config.read('.env')
 app = Flask(__name__)
 
 # firebase config
-config = {
+firebaseConfig = {
     "apiKey": config['FIREBASE']['KEY'],
     "authDomain": "convoofire.firebaseapp.com",
     "databaseURL": "https://convoofire.firebaseio.com",
     "storageBucket": "convoofire.appspot.com",
     "serviceAccount": "convoofire.json" # We should change this to login by email 
 }
-firebase = pyrebase.initialize_app(config)
+firebase = pyrebase.initialize_app(firebaseConfig)
 db = firebase.database()
 
 # Fired when an email is added to the queue
