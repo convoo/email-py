@@ -3,18 +3,19 @@
 
 # [START app]
 import logging
-
+from config import Config
 from flask import Flask, jsonify
 
 # settings.py
 import os
 from os.path import join, dirname
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
+#dotenv_path = join(dirname(__file__), '.env')
+#load_dotenv(dotenv_path)
 
-dotenv_path = join(dirname(__file__), '.env')
-load_dotenv(dotenv_path)
 
-SENDGRID_KEY = os.environ.get("SENDGRID_KEY")
+# environment variables 
+cfg = Config(file('.env'))
 
 
 # using SendGrid's Python Library - https://github.com/sendgrid/sendgrid-python
@@ -23,8 +24,7 @@ from sendgrid.helpers.mail import *
 
 app = Flask(__name__)
 
-
-
+# routes
 @app.route('/')
 def hello():
     return jsonify({'message': "Hello!"})
@@ -32,8 +32,8 @@ def hello():
 
 @app.route('/email')
 def email():
-    print(SENDGRID_KEY)
-    sg = sendgrid.SendGridAPIClient(apikey=SENDGRID_KEY)
+    print(cfg.SENDGRID_KEY)
+    sg = sendgrid.SendGridAPIClient(apikey=cfg.SENDGRID_KEY)
     from_email = Email("teamconvoo@gmail.com")
     subject = "Hello World from the SendGrid Python Library!"
     to_email = Email("teamconvoo@gmail.com")
