@@ -3,7 +3,7 @@
 
 # [START app]
 import logging
-from config import Config
+import configparser
 from flask import Flask, jsonify
 
 # settings.py
@@ -15,7 +15,8 @@ from os.path import join, dirname
 
 
 # environment variables 
-cfg = Config(file('.env'))
+config = configparser.ConfigParser()
+config.read('.env')
 
 
 # using SendGrid's Python Library - https://github.com/sendgrid/sendgrid-python
@@ -32,11 +33,10 @@ def hello():
 
 @app.route('/email')
 def email():
-    print(cfg.SENDGRID_KEY)
-    sg = sendgrid.SendGridAPIClient(apikey=cfg.SENDGRID_KEY)
+    sg = sendgrid.SendGridAPIClient(apikey=config['SENDGRID']['KEY'])
     from_email = Email("teamconvoo@gmail.com")
     subject = "Hello World from the SendGrid Python Library!"
-    to_email = Email("teamconvoo@gmail.com")
+    to_email = Email("people@gmail.com")
     content = Content("text/plain", "Hello, Email!")
     mail = Mail(from_email, subject, to_email, content)
     response = sg.client.mail.send.post(request_body=mail.get())
