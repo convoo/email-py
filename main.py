@@ -76,20 +76,21 @@ def test():
 def index():
     return render_template('index.html')
 
-@app.route('/register')
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    return render_template('register.html')
+        if request.method == 'POST':
+            url = request.form['url']
+            username = request.form['username']
+            password = request.form['password']
+            apiKey = request.form['apiKey']
+            adminUsername = request.form['adminUsername']
+            adminPassword = request.form['adminPassword']
+            return redirect(url_for('pay'))
+        else:
+            return render_template('register.html')
 
-@app.route('/pay', methods = ['GET', 'POST'])
+@app.route('/pay')
 def pay():
-    if request.method == 'POST':
-        url = request.form['url']
-        username = request.form['username']
-        password = request.form['password']
-        apiKey = request.form['apiKey']
-        adminUsername = request.form['adminUsername']
-        adminPassword = request.form['adminPassword']
-        return redirect(url_for('pay'))
     return render_template('pay.html')
 
 @app.route('/contact')
