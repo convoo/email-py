@@ -35,18 +35,16 @@ def stream_handler(post):
         dataSize = (len(post["data"]))
         if dataSize == 6: # this number represents the number of keys in the json its nasty but it works
         # if the queue stops for any reason and emails back up we still need to go through the ones we havent sent
-            prepareEmail(post["path"], post["data"])
+            checkEmail(post["path"], post["data"])
         else:
             for i in post["data"]:
-                prepareEmail(i, post["data"][i])
+                checkEmail(i, post["data"][i])
 
 # watch the queue 
 my_stream = db.child("email/queue/").stream(stream_handler)
 
 # prepare email
-def prepareEmail(path, data):
-    db.child("email/sent").push(data)
-    db.child("email/queue").child(path).remove()
+def checkEmail(path, data):
     sendToEmail = (data['toEmail'])
     timeBefore = int(time.time()) - 84946 #24 hours ago
     timeNow = int(time.time())
@@ -59,6 +57,8 @@ def prepareEmail(path, data):
         sendEmail(data['fromEmail'], data['subject'], data['toEmail'], data['contentType'], data['mailContent'])
     else:
         print('We Sent this person an email today already!')
+    db.child("email/sent").push(data)
+    db.child("email/queue").child(path).remove()
 
 # send email 
 def sendEmail(fromEmail, subject, toEmail, contentType, mailContent):
@@ -74,7 +74,7 @@ def sendEmail(fromEmail, subject, toEmail, contentType, mailContent):
 # place an email in the queue for testng 
 @app.route('/test')
 def test(): 
-    db.child("email/queue").push({"fromEmail":"teamconvoo@gmail.com","subject":"You are officially on the Beta List!", "toEmail":"email.will.in.china@gmail.com", "contentType":"text/plain", "mailContent":"Woohoo!", "time": int(time.time())})
+    db.child("email/queue").push({"fromEmail":"teamconvoo@gmail.com","subject":"You are officially on the Beta List!", "toEmail":"email3.will.in.china@gmail.com", "contentType":"text/plain", "mailContent":"Woohoo!", "time": int(time.time())})
     return jsonify({'message': "We sent a test email!"})
 
 @app.route('/')
