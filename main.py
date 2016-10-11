@@ -6,6 +6,7 @@
 
 # [START app]
 import time, logging, configparser
+import threading
 import pyrebase
 import sendgrid
 from flask import Flask, jsonify, render_template, request, redirect, url_for
@@ -42,8 +43,16 @@ def stream_handler(post):
             for i in post["data"]:
                 checkEmail(i, post["data"][i])
 
+
+
 # watch the queue 
-my_stream = db.child("email/queue/").stream(stream_handler, token)
+def startStream (): 
+    threading.Timer(int(config['TIMER']['INTERVAL']), startStream).start ()
+    my_stream = db.child("email/queue/").stream(stream_handler, token)
+    my_stream.close()
+    my_stream = db.child("email/queue/").stream(stream_handler, token)
+startStream()
+
 
 # prepare email -- Maybe we should check of the toEmail and the Subject are the same when preventing emails??
 def checkEmail(path, data):
