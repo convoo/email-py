@@ -47,9 +47,13 @@ def stream_handler(post):
 
 # watch the queue 
 def startStream (): 
+    db.child("email/logs").push({"status":"starting", "time": int(time.time())})
     threading.Timer(int(config['TIMER']['INTERVAL']), startStream).start ()
+    db.child("email/logs").push({"status":"starting stream", "time": int(time.time())})
     my_stream = db.child("email/queue/").stream(stream_handler, token)
+    db.child("email/logs").push({"status":"closing stream", "time": int(time.time())})
     my_stream.close()
+    db.child("email/logs").push({"status":"starting stream", "time": int(time.time())})
     my_stream = db.child("email/queue/").stream(stream_handler, token)
 startStream()
 
