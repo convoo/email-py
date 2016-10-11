@@ -45,19 +45,24 @@ my_stream = db.child("email/queue/").stream(stream_handler)
 
 # prepare email
 def prepareEmail(path, data):
-    print(data['fromEmail'])
     db.child("email/sent").push(data)
     db.child("email/queue").child(path).remove()
-    timeNow = int(time.time())
+    sendToEmail = (data['toEmail'])
     timeBefore = int(time.time()) - 84946 #24 hours ago
-    # Have we sent this gut an email before?
-    #sentToday = db.child("email/sent").order_by_child("time").start_at(timeNow).end_at(timeBefore).get()
-    #print(sentToday)
-    sendEmail(data['fromEmail'], data['subject'], data['toEmail'], data['contentType'], data['mailContent'])
+    timeNow = int(time.time())
+    sentToday = db.child("email/sent").order_by_child("time").start_at(timeBefore).end_at(timeNow).get()
+    todaysRecipients = []
+    for i in sentToday.each():
+        if i.val()['toEmail'] not in todaysRecipients:
+            todaysRecipients.append(i.val()['toEmail'])
+    if sendToEmail not in todaysRecipients:
+        sendEmail(data['fromEmail'], data['subject'], data['toEmail'], data['contentType'], data['mailContent'])
+    else:
+        print('We Sent this person an email today already!')
 
 # send email 
 def sendEmail(fromEmail, subject, toEmail, contentType, mailContent):
-    if fromEmail and subject and toEmail and contentType and Content:
+    if fromEmail and subject and toEmail and contentType and mailContent:
         print('SENDING')
         # sg = sendgrid.SendGridAPIClient(apikey=config['SENDGRID']['KEY'])
         # from_email = Email(fromEmail)
