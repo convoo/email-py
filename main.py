@@ -45,6 +45,7 @@ def stream_handler(post):
 
 def makeLog(msg): 
     db.child("email/logs").push({"status":msg, "time": int(time.time())})
+    logging.info(msg)
 
 # watch the queue 
 def startStream (): 
