@@ -9,8 +9,8 @@ import time, logging, configparser
 import pyrebase
 import sendgrid
 from flask import Flask, jsonify, render_template, request, redirect, url_for
-from utils import test
 from sendgrid.helpers.mail import *
+
 
 # environment variables 
 config = configparser.ConfigParser()
@@ -24,57 +24,61 @@ firebaseConfig = {
     "authDomain": "convoofire.firebaseapp.com",
     "databaseURL": "https://convoofire.firebaseio.com",
     "storageBucket": "convoofire.appspot.com",
-    "serviceAccount": "convoofire.json" # We should change this to login by email 
 }
+# Get a reference to the auth service
 firebase = pyrebase.initialize_app(firebaseConfig)
+auth = firebase.auth()
+user = auth.sign_in_with_email_and_password(config["FIREBASE"]["EMAIL"], config["FIREBASE"]["PASSWORD"])
 db = firebase.database()
+token = user['idToken']
+
 
 # Fired when an email is added to the queue
 def stream_handler(post):
     if post["data"]:    
-        dataSize = (len(post["data"]))
-        if dataSize == 6: # this number represents the number of keys in the json its nasty but it works
-        # if the queue stops for any reason and emails back up we still need to go through the ones we havent sent
+        if 'toEmail' in post['data']:
             checkEmail(post["path"], post["data"])
         else:
             for i in post["data"]:
                 checkEmail(i, post["data"][i])
 
 # watch the queue 
-my_stream = db.child("email/queue/").stream(stream_handler)
+my_stream = db.child("email/queue/").stream(stream_handler, token)
 
-# prepare email
+# prepare email -- Maybe we should check of the toEmail and the Subject are the same when preventing emails??
 def checkEmail(path, data):
     sendToEmail = (data['toEmail'])
     timeBefore = int(time.time()) - 84946 #24 hours ago
     timeNow = int(time.time())
-    sentToday = db.child("email/sent").order_by_child("time").start_at(timeBefore).end_at(timeNow).get()
-    todaysRecipients = []
-    for i in sentToday.each():
-        if i.val()['toEmail'] not in todaysRecipients:
-            todaysRecipients.append(i.val()['toEmail'])
-    if sendToEmail not in todaysRecipients:
-        sendEmail(data['fromEmail'], data['subject'], data['toEmail'], data['contentType'], data['mailContent'])
+    sentToday = db.child("email/sent").order_by_child("time").start_at(timeBefore).end_at(timeNow).get(token)
+    todaysRecipients = list(set([i.val()['toEmail'] for i in sentToday.each()]))
+    if config['SENDGRID']['DUPLICATES'].lower() == 'false':
+        if sendToEmail not in todaysRecipients:
+            sendEmail(data)
+        else:
+            print('We Sent this person an email today already!')
     else:
-        print('We Sent this person an email today already!')
-    db.child("email/sent").push(data)
-    db.child("email/queue").child(path).remove()
+        sendEmail(data)
+    db.child("email/sent").push(data, token)
+    db.child("email/queue").child(path).remove(token)
 
 # send email 
-def sendEmail(fromEmail, subject, toEmail, contentType, mailContent):
-    if fromEmail and subject and toEmail and contentType and mailContent:
-        print('SENDING')
-        # sg = sendgrid.SendGridAPIClient(apikey=config['SENDGRID']['KEY'])
-        # from_email = Email(fromEmail)
-        # to_email = Email(toEmail)
-        # content = Content(contentType, mailContent)
-        # mail = Mail(from_email, subject, to_email, content)
-        # response = sg.client.mail.send.post(request_body=mail.get())
+def sendEmail(data):
+    #data['fromEmail'], data['subject'], data['toEmail'], data['contentType'], data['mailContent']
+    if data['fromEmail'] and data['subject'] and data['toEmail'] and data['contentType'] and data['mailContent']:
+        sg = sendgrid.SendGridAPIClient(apikey=config['SENDGRID']['KEY'])
+        from_email = Email(data['fromEmail'])
+        to_email = Email(data['toEmail'])
+        content = Content(data['contentType'], data['mailContent'])
+        mail = Mail(from_email, data['subject'], to_email, content)
+        response = sg.client.mail.send.post(request_body=mail.get())
+    else:
+        db.child("email/sent").push(data, token)
 
 # place an email in the queue for testng 
 @app.route('/test')
 def test(): 
-    db.child("email/queue").push({"fromEmail":"teamconvoo@gmail.com","subject":"You are officially on the Beta List!", "toEmail":"email3.will.in.china@gmail.com", "contentType":"text/plain", "mailContent":"Woohoo!", "time": int(time.time())})
+    db.child("email/queue").push({"fromEmail":"teamconvoo@gmail.com","subject":"You are officially on the Beta List!", "toEmail":"email.will.in.china@gmail.com", "contentType":"text/plain", "mailContent":"Woohoo!", "time": int(time.time())})
     return jsonify({'message': "We sent a test email!"})
 
 @app.route('/')
@@ -83,16 +87,17 @@ def index():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-        if request.method == 'POST':
-            url = request.form['url']
-            username = request.form['username']
-            password = request.form['password']
-            apiKey = request.form['apiKey']
-            adminUsername = request.form['adminUsername']
-            adminPassword = request.form['adminPassword']
-            return redirect(url_for('pay'))
-        else:
-            return render_template('register.html')
+    if request.method == 'POST':
+        url = request.form['url']
+        username = request.form['username']
+        password = request.form['password']
+        apiKey = request.form['apiKey']
+        adminUsername = request.form['adminUsername']
+        adminPassword = request.form['adminPassword']
+        print(url)
+        return redirect(url_for('pay'))
+    else:
+        return render_template('register.html')
 
 @app.route('/pay')
 def pay():
