@@ -49,6 +49,13 @@ def makeLog(msg):
 
 # watch the queue 
 def startStream (): 
+    makeLog('NEW CONNECTION')
+    firebase = pyrebase.initialize_app(firebaseConfig)
+    auth = firebase.auth()
+    user = auth.sign_in_with_email_and_password(config["FIREBASE"]["EMAIL"], config["FIREBASE"]["PASSWORD"])
+    db = firebase.database()
+    token = user['idToken']
+    makeLog(user)
     makeLog('Starting')
     threading.Timer(int(config['TIMER']['INTERVAL']), startStream).start ()
     makeLog('Starting Stream')
