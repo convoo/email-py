@@ -33,42 +33,33 @@ user = auth.sign_in_with_email_and_password(config["FIREBASE"]["EMAIL"], config[
 db = firebase.database()
 token = user['idToken']
 
-
-# Fired when an email is added to the queue
-def stream_handler(post):
-    if post["data"]:    
-        if 'toEmail' in post['data']:
-            checkEmail(post["path"], post["data"])
-        else:
-            for i in post["data"]:
-                checkEmail(i, post["data"][i])
-
-def makeLog(msg): 
+def makeLog(msg):
+    """
+        Make a log in firebase and google app engine
+    """
     db.child("email/logs").push({"status":msg, "time": int(time.time())})
     logging.info(msg)
 
-# watch the queue 
-def startStream (): 
-    makeLog('NEW CONNECTION')
-    firebase = pyrebase.initialize_app(firebaseConfig)
-    auth = firebase.auth()
-    user = auth.sign_in_with_email_and_password(config["FIREBASE"]["EMAIL"], config["FIREBASE"]["PASSWORD"])
-    db = firebase.database()
-    token = user['idToken']
-    makeLog(user)
-    makeLog('Starting')
-    threading.Timer(int(config['TIMER']['INTERVAL']), startStream).start ()
-    makeLog('Starting Stream')
-    my_stream = db.child("email/queue/").stream(stream_handler, token)
-    makeLog('Closing Stream')
-    my_stream.close()
-    makeLog('Starting Stream')
-    my_stream = db.child("email/queue/").stream(stream_handler, token)
-startStream()
-
+def sendEmail(data):
+    """
+        Given email data, send it
+    """
+    if data['fromEmail'] and data['subject'] and data['toEmail'] and data['contentType'] and data['mailContent']:
+        sg = sendgrid.SendGridAPIClient(apikey=config['SENDGRID']['KEY'])
+        from_email = Email(data['fromEmail'])
+        to_email = Email(data['toEmail'])
+        content = Content(data['contentType'], data['mailContent'])
+        mail = Mail(from_email, data['subject'], to_email, content)
+        response = sg.client.mail.send.post(request_body=mail.get())
+    else:
+        db.child("email/sent").push(data, token)
 
 # prepare email -- Maybe we should check of the toEmail and the Subject are the same when preventing emails??
 def checkEmail(path, data):
+    """
+        Check email data and send it if appropriate
+    """
+    print(data)
     sendToEmail = (data['toEmail'])
     timeBefore = int(time.time()) - 84946 #24 hours ago
     timeNow = int(time.time())
@@ -84,18 +75,37 @@ def checkEmail(path, data):
     db.child("email/sent").push(data, token)
     db.child("email/queue").child(path).remove(token)
 
-# send email 
-def sendEmail(data):
-    #data['fromEmail'], data['subject'], data['toEmail'], data['contentType'], data['mailContent']
-    if data['fromEmail'] and data['subject'] and data['toEmail'] and data['contentType'] and data['mailContent']:
-        sg = sendgrid.SendGridAPIClient(apikey=config['SENDGRID']['KEY'])
-        from_email = Email(data['fromEmail'])
-        to_email = Email(data['toEmail'])
-        content = Content(data['contentType'], data['mailContent'])
-        mail = Mail(from_email, data['subject'], to_email, content)
-        response = sg.client.mail.send.post(request_body=mail.get())
-    else:
-        db.child("email/sent").push(data, token)
+def stream_handler(post):
+    """
+        Handles objects being added to the email queue stream
+    """
+    if post["data"]:    
+        if 'toEmail' in post['data']:
+            checkEmail(post["path"], post["data"])
+        else:
+            for i in post["data"]:
+                checkEmail(i, post["data"][i])
+
+def startStream ():
+    """
+        Starts the stream watching the email queue
+    """
+    global user
+    global my_stream
+    makeLog('NEW CONNECTION')
+    user = auth.refresh(user['refreshToken'])
+    makeLog(user)
+    makeLog('Starting')
+    threading.Timer(int(config['TIMER']['INTERVAL']), startStream).start()
+    my_stream.close()
+    makeLog('Closing Stream')
+    
+    my_stream = db.child("email/queue/").stream(stream_handler, user['idToken'])
+    makeLog('Starting Stream')
+
+my_stream = db.child("email/queue/").stream(stream_handler, user['idToken'])
+startStream()
+
 
 # place an email in the queue for testng 
 @app.route('/test')
