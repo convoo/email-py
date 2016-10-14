@@ -86,6 +86,8 @@ def stream_handler(post):
             for i in post["data"]:
                 checkEmail(i, post["data"][i])
 
+my_stream = db.child("email/queue/").stream(stream_handler, user['idToken'])
+
 def startStream ():
     """
         Starts the stream watching the email queue
@@ -103,7 +105,6 @@ def startStream ():
     my_stream = db.child("email/queue/").stream(stream_handler, user['idToken'])
     makeLog('Starting Stream')
 
-my_stream = db.child("email/queue/").stream(stream_handler, user['idToken'])
 startStream()
 
 
